@@ -1,0 +1,33 @@
+# .github/workflows/d1-backup.yml in food-logger-backups
+name: d1-backup
+on:
+  schedule:
+    - cron: "17 2 * * 1"   # Mondays 02:17 UTC
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Export D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir -p backups
+          d=$(date -u +%F)
+          npx --yes wrangler@4.151.3 d1 export food-mcp --remote --output "backups/$d.sql"
+          gzip -9 "backups/$d.sql"
+          ls -1 backups/*.sql.gz | sort -r | tail -n +27 | xargs -r git rm -q --ignore-unmatch
+      - name: Commit
+        run: |
+          git config user.name "food-logger-backup"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A backups
+          git commit -m "Backup $(date -u +%F)" || echo "nothing to commit"
+          git push
