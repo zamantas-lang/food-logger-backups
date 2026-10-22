@@ -22,7 +22,7 @@ jobs:
           mkdir -p backups
           d=$(date -u +%F)
           npx --yes wrangler@4.151.3 d1 export food-mcp --remote --output "backups/$d.sql"
-          gzip -9 "backups/$d.sql"
+          gzip -9f "backups/$d.sql"
           ls -1 backups/*.sql.gz | sort -r | tail -n +27 | xargs -r git rm -q --ignore-unmatch
       - name: Commit
         run: |
